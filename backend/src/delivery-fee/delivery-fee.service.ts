@@ -6,7 +6,6 @@ export class DeliveryFeeService {
   constructor(private prisma: PrismaService) {}
 
   async getConfig() {
-    // Buscar a configuração atual ou criar uma padrão se não existir
     const config = await this.prisma.deliveryFeeConfig.findFirst();
     
     if (!config) {
@@ -15,11 +14,11 @@ export class DeliveryFeeService {
           basePrice: 5.0,
           pricePerKm: 1.5,
           rushHourMultiplier: 1.5,
-          rushHourStart: 17, // 17h (5pm)
-          rushHourEnd: 21, // 21h (9pm)
+          rushHourStart: 17,
+          rushHourEnd: 21,
           nightFeeMultiplier: 1.2,
-          nightFeeStart: 22, // 22h (10pm)
-          nightFeeEnd: 6, // 6h (6am)
+          nightFeeStart: 22,
+          nightFeeEnd: 6,
         },
       });
     }
@@ -45,20 +44,22 @@ export class DeliveryFeeService {
     });
   }
 
-  async calculateDeliveryFee(distance: number, orderTime: Date = new Date()) {
+  async calculateDeliveryFee(distance: number) {
     const config = await this.getConfig();
     
-    // Calcular o preço base pela distância
+    // Calcular taxa base
     let fee = config.basePrice + (distance * config.pricePerKm);
     
     // Verificar se é horário de pico
-    const hour = orderTime.getHours();
+    const currentHour = new Date().getHours();
+    
     if (
       (config.rushHourStart <= config.rushHourEnd && 
-       hour >= config.rushHourStart && 
-       hour < config.rushHourEnd) ||
+       currentHour >= config.rushHourStart && 
+       currentHour < config.rushHourEnd) ||
       (config.rushHourStart > config.rushHourEnd && 
-       (hour >= config.rushHourStart || hour < config.rushHourEnd))
+       (currentHour >= config.rushHourStart || 
+        currentHour < config.rushHourEnd))
     ) {
       fee *= config.rushHourMultiplier;
     }
@@ -66,10 +67,11 @@ export class DeliveryFeeService {
     // Verificar se é horário noturno
     if (
       (config.nightFeeStart <= config.nightFeeEnd && 
-       hour >= config.nightFeeStart && 
-       hour < config.nightFeeEnd) ||
+       currentHour >= config.nightFeeStart && 
+       currentHour < config.nightFeeEnd) ||
       (config.nightFeeStart > config.nightFeeEnd && 
-       (hour >= config.nightFeeStart || hour < config.nightFeeEnd))
+       (currentHour >= config.nightFeeStart || 
+        currentHour < config.nightFeeEnd))
     ) {
       fee *= config.nightFeeMultiplier;
     }
@@ -78,25 +80,30 @@ export class DeliveryFeeService {
     return Math.round(fee * 100) / 100;
   }
 
-  async getDeliveryTimeEstimate(distance: number, orderTime: Date = new Date()) {
-    // Tempo base: 10 minutos + 3 minutos por km
-    let timeInMinutes = 10 + (distance * 3);
+  async getDeliveryTimeEstimate(distance: number) {
+    // Tempo base: 10 minutos de preparo + 5 minutos por km
+    const baseTime = 10;
+    const timePerKm = 5;
     
-    // Adicionar tempo extra em horário de pico (30%)
+    let estimatedTime = baseTime + (distance * timePerKm);
+    
+    // Verificar se é horário de pico para ajustar o tempo
     const config = await this.getConfig();
-    const hour = orderTime.getHours();
+    const currentHour = new Date().getHours();
     
     if (
       (config.rushHourStart <= config.rushHourEnd && 
-       hour >= config.rushHourStart && 
-       hour < config.rushHourEnd) ||
+       currentHour >= config.rushHourStart && 
+       currentHour < config.rushHourEnd) ||
       (config.rushHourStart > config.rushHourEnd && 
-       (hour >= config.rushHourStart || hour < config.rushHourEnd))
+       (currentHour >= config.rushHourStart || 
+        currentHour < config.rushHourEnd))
     ) {
-      timeInMinutes *= 1.3;
+      // Adicionar 30% ao tempo em horário de pico
+      estimatedTime *= 1.3;
     }
     
     // Arredondar para o inteiro mais próximo
-    return Math.round(timeInMinutes);
+    return Math.round(estimatedTime);
   }
 }

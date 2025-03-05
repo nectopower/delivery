@@ -3,12 +3,11 @@ import { DeliveriesService } from './deliveries.service';
 import { DeliveriesController } from './deliveries.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { DeliveryFeeModule } from '../delivery-fee/delivery-fee.module';
-import { DeliveryPersonsModule } from '../delivery-persons/delivery-persons.module';
 
 @Module({
-  imports: [PrismaModule, DeliveryFeeModule, DeliveryPersonsModule],
+  imports: [PrismaModule, DeliveryFeeModule],
   controllers: [DeliveriesController],
   providers: [DeliveriesService],
-  exports: [DeliveriesService],
+  exports: [DeliveriesService]
 })
 export class DeliveriesModule {}

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { toast } from 'react-toastify';
+import { FaUser, FaLock, FaUtensils } from 'react-icons/fa';
 import { useAuth } from '../contexts/AuthContext';
 
 const LoginContainer = styled.div`
@@ -9,67 +9,98 @@ const LoginContainer = styled.div`
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background-color: #f1f5f9;
+  background-color: #f8fafc;
 `;
 
 const LoginCard = styled.div`
   width: 100%;
   max-width: 400px;
-  padding: 40px;
   background-color: white;
   border-radius: 8px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 32px;
 `;
 
-const Logo = styled.h1`
-  text-align: center;
-  margin-bottom: 30px;
-  color: #1e293b;
+const Logo = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 32px;
+`;
+
+const LogoIcon = styled.div`
+  font-size: 48px;
+  color: #0284c7;
+  margin-bottom: 16px;
+`;
+
+const LogoText = styled.h1`
+  font-size: 24px;
+  font-weight: 700;
+  color: #0284c7;
+  margin: 0;
 `;
 
 const Form = styled.form`
   display: flex;
   flex-direction: column;
+  gap: 16px;
 `;
 
 const FormGroup = styled.div`
-  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 `;
 
 const Label = styled.label`
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
-  color: #475569;
+  font-size: 14px;
+  color: #64748b;
 `;
 
-const Input = styled.input`
-  width: 100%;
-  padding: 12px;
-  border: 1px solid #cbd5e1;
+const InputWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  border: 1px solid #e2e8f0;
   border-radius: 4px;
-  font-size: 16px;
+  padding: 0 12px;
   
-  &:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  &:focus-within {
+    border-color: #0284c7;
+    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
   }
 `;
 
-const Button = styled.button`
-  padding: 12px;
-  background-color: #3b82f6;
+const InputIcon = styled.div`
+  color: #94a3b8;
+  margin-right: 8px;
+`;
+
+const Input = styled.input`
+  flex: 1;
+  padding: 12px 0;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  
+  &::placeholder {
+    color: #cbd5e1;
+  }
+`;
+
+const SubmitButton = styled.button`
+  background-color: #0284c7;
   color: white;
   border: none;
   border-radius: 4px;
+  padding: 12px;
   font-size: 16px;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: background-color 0.2s ease;
   
   &:hover {
-    background-color: #2563eb;
+    background-color: #0369a1;
   }
   
   &:disabled {
@@ -78,20 +109,26 @@ const Button = styled.button`
   }
 `;
 
-const ErrorMessage = styled.p`
+const ErrorMessage = styled.div`
   color: #ef4444;
-  margin-top: 20px;
+  font-size: 14px;
+  margin-top: 16px;
   text-align: center;
 `;
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   
-  const { signIn } = useAuth();
+  const { signIn, signed } = useAuth();
   const navigate = useNavigate();
+  
+  // Se já estiver autenticado, redireciona para a página inicial
+  if (signed) {
+    return <Navigate to="/" />;
+  }
   
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -101,26 +138,20 @@ const Login = () => {
       return;
     }
     
-    setLoading(true);
-    setError('');
-    
     try {
-      const user = await signIn(email, password);
+      setError('');
+      setLoading(true);
       
-      toast.success('Login realizado com sucesso!');
-      
-      // Redirecionar com base no papel do usuário
-      if (user.role === 'ADMIN') {
-        navigate('/');
-      } else if (user.role === 'RESTAURANT') {
-        navigate('/restaurant');
-      } else {
-        navigate('/');
-      }
+      await signIn(email, password);
+      navigate('/');
     } catch (err) {
-      console.error(err);
-      setError('Email ou senha inválidos. Por favor, tente novamente.');
-      toast.error('Falha no login. Verifique suas credenciais.');
+      console.error('Erro ao fazer login:', err);
+      
+      if (err.response && err.response.status === 401) {
+        setError('Email ou senha incorretos.');
+      } else {
+        setError('Ocorreu um erro ao fazer login. Tente novamente.');
+      }
     } finally {
       setLoading(false);
     }
@@ -129,33 +160,52 @@ const Login = () => {
   return (
     <LoginContainer>
       <LoginCard>
-        <Logo>Food Delivery</Logo>
+        <Logo>
+          <LogoIcon>
+            <FaUtensils />
+          </LogoIcon>
+          <LogoText>FoodDelivery</LogoText>
+        </Logo>
+        
         <Form onSubmit={handleSubmit}>
           <FormGroup>
             <Label htmlFor="email">Email</Label>
-            <Input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Seu email"
-              required
-            />
+            <InputWrapper>
+              <InputIcon>
+                <FaUser />
+              </InputIcon>
+              <Input
+                id="email"
+                type="email"
+                placeholder="Seu email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </InputWrapper>
           </FormGroup>
+          
           <FormGroup>
             <Label htmlFor="password">Senha</Label>
-            <Input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Sua senha"
-              required
-            />
+            <InputWrapper>
+              <InputIcon>
+                <FaLock />
+              </InputIcon>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Sua senha"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </InputWrapper>
           </FormGroup>
-          <Button type="submit" disabled={loading}>
+          
+          <SubmitButton type="submit" disabled={loading}>
             {loading ? 'Entrando...' : 'Entrar'}
-          </Button>
+          </SubmitButton>
+          
           {error && <ErrorMessage>{error}</ErrorMessage>}
         </Form>
       </LoginCard>

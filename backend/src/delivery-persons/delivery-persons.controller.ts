@@ -1,18 +1,18 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Put, Delete, Query, UseGuards } from '@nestjs/common';
 import { DeliveryPersonsService } from './delivery-persons.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { VehicleType, DeliveryPersonStatus } from '@prisma/client';
+import { VehicleType, DeliveryPersonStatus } from '../prisma/prisma.service';
 
 @Controller('delivery-persons')
 export class DeliveryPersonsController {
   constructor(private readonly deliveryPersonsService: DeliveryPersonsService) {}
 
-  @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
-  create(@Body() createDeliveryPersonDto: {
+  @Post()
+  async create(@Body() data: {
     email: string;
     password: string;
     name: string;
@@ -21,13 +21,13 @@ export class DeliveryPersonsController {
     vehicleType: VehicleType;
     vehiclePlate?: string;
   }) {
-    return this.deliveryPersonsService.create(createDeliveryPersonDto);
+    return this.deliveryPersonsService.create(data);
   }
 
-  @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
-  findAll(
+  @Get()
+  async findAll(
     @Query('skip') skip?: string,
     @Query('take') take?: string,
     @Query('status') status?: DeliveryPersonStatus,
@@ -35,27 +35,26 @@ export class DeliveryPersonsController {
     @Query('search') search?: string,
   ) {
     return this.deliveryPersonsService.findAll({
-      skip: skip ? parseInt(skip, 10) : undefined,
-      take: take ? parseInt(take, 10) : undefined,
+      skip: skip ? parseInt(skip) : undefined,
+      take: take ? parseInt(take) : undefined,
       status,
       isActive: isActive ? isActive === 'true' : undefined,
       search,
     });
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN', 'DELIVERY_PERSON')
-  findOne(@Param('id') id: string) {
+  async findOne(@Param('id') id: string) {
     return this.deliveryPersonsService.findOne(id);
   }
 
-  @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'DELIVERY_PERSON')
-  update(
+  @Put(':id')
+  async update(
     @Param('id') id: string,
-    @Body() updateDeliveryPersonDto: {
+    @Body() data: {
       name?: string;
       phone?: string;
       vehicleType?: VehicleType;
@@ -64,47 +63,46 @@ export class DeliveryPersonsController {
       isActive?: boolean;
     },
   ) {
-    return this.deliveryPersonsService.update(id, updateDeliveryPersonDto);
+    return this.deliveryPersonsService.update(id, data);
   }
 
-  @Patch(':id/location')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('DELIVERY_PERSON')
-  updateLocation(
+  @Put(':id/location')
+  async updateLocation(
     @Param('id') id: string,
-    @Body() locationData: { latitude: number; longitude: number },
+    @Body() data: { latitude: number; longitude: number },
   ) {
-    return this.deliveryPersonsService.updateLocation(id, locationData.latitude, locationData.longitude);
+    return this.deliveryPersonsService.updateLocation(id, data.latitude, data.longitude);
   }
 
-  @Patch(':id/status')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('DELIVERY_PERSON', 'ADMIN')
-  updateStatus(
+  @Roles('DELIVERY_PERSON')
+  @Put(':id/status')
+  async updateStatus(
     @Param('id') id: string,
-    @Body() statusData: { status: DeliveryPersonStatus },
+    @Body() data: { status: DeliveryPersonStatus },
   ) {
-    return this.deliveryPersonsService.updateStatus(id, statusData.status);
+    return this.deliveryPersonsService.updateStatus(id, data.status);
   }
 
-  @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
-  remove(@Param('id') id: string) {
+  @Delete(':id')
+  async remove(@Param('id') id: string) {
     return this.deliveryPersonsService.remove(id);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get(':id/stats')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN', 'DELIVERY_PERSON')
-  getDeliveryStats(@Param('id') id: string) {
+  async getDeliveryStats(@Param('id') id: string) {
     return this.deliveryPersonsService.getDeliveryStats(id);
   }
 
-  @Get('available/near')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'RESTAURANT')
-  getAvailableDeliveryPersons(
+  @Get('available/nearby')
+  async getAvailableDeliveryPersons(
     @Query('latitude') latitude: string,
     @Query('longitude') longitude: string,
   ) {

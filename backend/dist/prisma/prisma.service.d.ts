@@ -1,4 +1,41 @@
 import { OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+export declare enum UserRole {
+    ADMIN = "ADMIN",
+    RESTAURANT = "RESTAURANT",
+    CUSTOMER = "CUSTOMER",
+    DELIVERY_PERSON = "DELIVERY_PERSON"
+}
+export declare enum OrderStatus {
+    PENDING = "PENDING",
+    PREPARING = "PREPARING",
+    READY = "READY",
+    DELIVERING = "DELIVERING",
+    DELIVERED = "DELIVERED",
+    CANCELLED = "CANCELLED"
+}
+export declare enum PaymentStatus {
+    PENDING = "PENDING",
+    COMPLETED = "COMPLETED",
+    FAILED = "FAILED",
+    REFUNDED = "REFUNDED"
+}
+export declare enum PaymentMethod {
+    CREDIT_CARD = "CREDIT_CARD",
+    DEBIT_CARD = "DEBIT_CARD",
+    PIX = "PIX",
+    CASH = "CASH"
+}
+export declare enum DeliveryPersonStatus {
+    AVAILABLE = "AVAILABLE",
+    BUSY = "BUSY",
+    OFFLINE = "OFFLINE"
+}
+export declare enum VehicleType {
+    BICYCLE = "BICYCLE",
+    MOTORCYCLE = "MOTORCYCLE",
+    CAR = "CAR",
+    VAN = "VAN"
+}
 declare class MockPrismaClient {
     user: {
         create: (data: any) => Promise<any>;
@@ -171,6 +208,111 @@ declare class MockPrismaClient {
         }>;
         count: (params?: {}) => Promise<number>;
     };
+    delivery: {
+        create: (data: any) => Promise<any>;
+        findUnique: (params: any) => Promise<{
+            id: string;
+            orderId: string;
+            status: string;
+            fee: number;
+            distance: number;
+            estimatedTime: number;
+            deliveryPersonId: any;
+            startTime: any;
+            endTime: any;
+            customerRating: any;
+            customerFeedback: any;
+            createdAt: Date;
+            updatedAt: Date;
+            order: {
+                id: string;
+                status: string;
+                total: number;
+                address: string;
+                customer: {
+                    user: {
+                        name: string;
+                        email: string;
+                    };
+                    phone: string;
+                };
+                restaurant: {
+                    user: {
+                        name: string;
+                    };
+                    address: string;
+                    phone: string;
+                };
+                items: any[];
+            };
+            deliveryPerson: any;
+        }>;
+        findMany: (params?: {}) => Promise<any[]>;
+        update: (params: any) => Promise<any>;
+        delete: (params: any) => Promise<{
+            id: string;
+        }>;
+        count: (params?: {}) => Promise<number>;
+        aggregate: (params?: {}) => Promise<{
+            _sum: {
+                fee: number;
+            };
+        }>;
+    };
+    deliveryPerson: {
+        create: (data: any) => Promise<any>;
+        findUnique: (params: any) => Promise<{
+            id: string;
+            userId: string;
+            cpf: string;
+            phone: string;
+            vehicleType: string;
+            vehiclePlate: string;
+            status: string;
+            rating: number;
+            totalDeliveries: number;
+            isActive: boolean;
+            currentLatitude: number;
+            currentLongitude: number;
+            createdAt: Date;
+            updatedAt: Date;
+            user: {
+                id: string;
+                name: string;
+                email: string;
+            };
+            deliveries: any[];
+        }>;
+        findMany: (params?: {}) => Promise<any[]>;
+        update: (params: any) => Promise<any>;
+        delete: (params: any) => Promise<{
+            id: string;
+        }>;
+        count: (params?: {}) => Promise<number>;
+    };
+    deliveryFeeConfig: {
+        create: (data: any) => Promise<any>;
+        findFirst: () => Promise<{
+            id: string;
+            basePrice: number;
+            pricePerKm: number;
+            rushHourMultiplier: number;
+            rushHourStart: number;
+            rushHourEnd: number;
+            nightFeeMultiplier: number;
+            nightFeeStart: number;
+            nightFeeEnd: number;
+            createdAt: Date;
+            updatedAt: Date;
+        }>;
+        update: (params: any) => Promise<any>;
+        findMany: (params?: {}) => Promise<any[]>;
+        delete: (params: any) => Promise<{
+            id: string;
+        }>;
+        count: (params?: {}) => Promise<number>;
+    };
+    $transaction: (operations: any) => Promise<any[]>;
     $connect(): Promise<void>;
     $disconnect(): Promise<void>;
 }

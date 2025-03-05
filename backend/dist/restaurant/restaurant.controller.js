@@ -22,104 +22,119 @@ let RestaurantController = class RestaurantController {
     constructor(restaurantService) {
         this.restaurantService = restaurantService;
     }
-    async findAll() {
+    findAll() {
         return this.restaurantService.findAll();
     }
-    async findById(id) {
+    findOne(id) {
         return this.restaurantService.findById(id);
     }
-    async findByUserId(userId) {
-        return this.restaurantService.findByUserId(userId);
+    create(createRestaurantDto) {
+        return this.restaurantService.create(createRestaurantDto);
     }
-    async create(data) {
-        return this.restaurantService.create(data);
+    update(id, updateRestaurantDto) {
+        return this.restaurantService.update(id, updateRestaurantDto);
     }
-    async update(id, data) {
-        return this.restaurantService.update(id, data);
-    }
-    async delete(id) {
+    remove(id) {
         return this.restaurantService.delete(id);
     }
-    async approve(id) {
-        return this.restaurantService.updateApprovalStatus(id, true);
+    approveRestaurant(id, data) {
+        return this.restaurantService.updateApprovalStatus(id, data.isApproved);
     }
-    async reject(id) {
-        return this.restaurantService.updateApprovalStatus(id, false);
+    getRestaurantDishes(id) {
+        return [];
+    }
+    getRestaurantReviews(id) {
+        return [];
+    }
+    rateRestaurant(id, ratingData) {
+        if (ratingData.comment && ratingData.comment.length > 140) {
+            throw new Error('O comentário deve ter no máximo 140 caracteres');
+        }
+        return { success: true, message: 'Avaliação registrada com sucesso' };
     }
 };
 exports.RestaurantController = RestaurantController;
 __decorate([
+    (0, common_1.Get)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)('ADMIN'),
-    (0, common_1.Get)(),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
-    __metadata("design:returntype", Promise)
+    __metadata("design:returntype", void 0)
 ], RestaurantController.prototype, "findAll", null);
 __decorate([
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Get)(':id'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", Promise)
-], RestaurantController.prototype, "findById", null);
+    __metadata("design:returntype", void 0)
+], RestaurantController.prototype, "findOne", null);
 __decorate([
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
-    (0, common_1.Get)('user/:userId'),
-    __param(0, (0, common_1.Param)('userId')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", Promise)
-], RestaurantController.prototype, "findByUserId", null);
-__decorate([
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)('ADMIN', 'RESTAURANT'),
     (0, common_1.Post)(),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", Promise)
+    __metadata("design:returntype", void 0)
 ], RestaurantController.prototype, "create", null);
 __decorate([
+    (0, common_1.Patch)(':id'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)('ADMIN', 'RESTAURANT'),
-    (0, common_1.Put)(':id'),
+    (0, roles_decorator_1.Roles)('ADMIN'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, Object]),
-    __metadata("design:returntype", Promise)
+    __metadata("design:returntype", void 0)
 ], RestaurantController.prototype, "update", null);
 __decorate([
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)('ADMIN'),
     (0, common_1.Delete)(':id'),
-    __param(0, (0, common_1.Param)('id')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", Promise)
-], RestaurantController.prototype, "delete", null);
-__decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)('ADMIN'),
-    (0, common_1.Put)(':id/approve'),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", Promise)
-], RestaurantController.prototype, "approve", null);
+    __metadata("design:returntype", void 0)
+], RestaurantController.prototype, "remove", null);
 __decorate([
+    (0, common_1.Patch)(':id/approve'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)('ADMIN'),
-    (0, common_1.Put)(':id/reject'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], RestaurantController.prototype, "approveRestaurant", null);
+__decorate([
+    (0, common_1.Get)(':id/dishes'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", Promise)
-], RestaurantController.prototype, "reject", null);
+    __metadata("design:returntype", void 0)
+], RestaurantController.prototype, "getRestaurantDishes", null);
+__decorate([
+    (0, common_1.Get)(':id/reviews'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], RestaurantController.prototype, "getRestaurantReviews", null);
+__decorate([
+    (0, common_1.Post)(':id/rate'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], RestaurantController.prototype, "rateRestaurant", null);
 exports.RestaurantController = RestaurantController = __decorate([
-    (0, common_1.Controller)('restaurant'),
+    (0, common_1.Controller)('admin/restaurants'),
     __metadata("design:paramtypes", [restaurant_service_1.RestaurantService])
 ], RestaurantController);
 //# sourceMappingURL=restaurant.controller.js.map

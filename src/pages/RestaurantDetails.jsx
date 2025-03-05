@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import styled from 'styled-components';
-import { FaArrowLeft, FaEdit, FaTrash, FaStar, FaPhone, FaMapMarkerAlt, FaUtensils, FaCalendarAlt } from 'react-icons/fa';
+import { FaArrowLeft, FaEdit, FaTrash, FaStar, FaPhone, FaMapMarkerAlt, FaUtensils, FaCalendarAlt, FaCheck, FaTimes, FaComment } from 'react-icons/fa';
 import api from '../services/api';
+import StarRating from '../components/StarRating';
 
 const DetailsContainer = styled.div`
   display: flex;
@@ -183,25 +184,174 @@ const NoItems = styled.p`
   font-style: italic;
 `;
 
+const RatingSection = styled.div`
+  background-color: white;
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+`;
+
+const RatingForm = styled.form`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 500px;
+`;
+
+const CommentInput = styled.textarea`
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 14px;
+  resize: vertical;
+  min-height: 80px;
+  
+  &:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  }
+`;
+
+const CharacterCounter = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  font-size: 12px;
+  color: ${props => props.isLimit ? '#ef4444' : '#94a3b8'};
+  margin-top: 4px;
+`;
+
+const SubmitButton = styled.button`
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 10px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  width: fit-content;
+  
+  &:hover {
+    background-color: #2563eb;
+  }
+  
+  &:disabled {
+    background-color: #94a3b8;
+    cursor: not-allowed;
+  }
+`;
+
+const DetailLabel = styled.span`
+  color: #64748b;
+  font-size: 14px;
+`;
+
+const ReviewsSection = styled.div`
+  margin-top: 16px;
+`;
+
+const ReviewItem = styled.div`
+  padding: 16px;
+  border-bottom: 1px solid #e2e8f0;
+  
+  &:last-child {
+    border-bottom: none;
+  }
+`;
+
+const ReviewHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+`;
+
+const ReviewAuthor = styled.div`
+  font-weight: 500;
+  color: #1e293b;
+`;
+
+const ReviewDate = styled.div`
+  font-size: 12px;
+  color: #94a3b8;
+`;
+
+const ReviewText = styled.p`
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.5;
+`;
+
+const CommentTypeSelector = styled.div`
+  display: flex;
+  gap: 12px;
+  margin-bottom: 8px;
+`;
+
+const CommentTypeButton = styled.button`
+  background-color: ${props => props.active ? (props.type === 'praise' ? '#dcfce7' : '#fee2e2') : '#f1f5f9'};
+  color: ${props => props.active ? (props.type === 'praise' ? '#16a34a' : '#dc2626') : '#64748b'};
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  
+  &:hover {
+    background-color: ${props => props.type === 'praise' ? '#dcfce7' : '#fee2e2'};
+    color: ${props => props.type === 'praise' ? '#16a34a' : '#dc2626'};
+  }
+`;
+
+const CommentTypeBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-left: 8px;
+  background-color: ${props => props.type === 'praise' ? '#dcfce7' : '#fee2e2'};
+  color: ${props => props.type === 'praise' ? '#16a34a' : '#dc2626'};
+`;
+
 const RestaurantDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [restaurant, setRestaurant] = useState(null);
   const [menu, setMenu] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [adminRating, setAdminRating] = useState(0);
+  const [comment, setComment] = useState('');
+  const [commentType, setCommentType] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [reviews, setReviews] = useState([]);
+  
+  const MAX_COMMENT_LENGTH = 140;
   
   useEffect(() => {
     fetchRestaurantDetails();
+    fetchReviews();
   }, [id]);
   
   const fetchRestaurantDetails = async () => {
     try {
       setLoading(true);
-      // Em um cenário real, você buscaria esses dados da API
-      // const restaurantResponse = await api.get(`/admin/restaurants/${id}`);
-      // const menuResponse = await api.get(`/admin/restaurants/${id}/dishes`);
-      // setRestaurant(restaurantResponse.data);
-      // setMenu(menuResponse.data);
+      const response = await api.get(`/admin/restaurants/${id}`);
+      setRestaurant(response.data);
+      
+      const menuResponse = await api.get(`/admin/restaurants/${id}/dishes`);
+      setMenu(menuResponse.data);
+      
+      setLoading(false);
+    } catch (error) {
+      console.error('Erro ao buscar detalhes do restaurante:', error);
+      setLoading(false);
       
       // Dados simulados para demonstração
       setTimeout(() => {
@@ -256,24 +406,93 @@ const RestaurantDetails = () => {
         setMenu(mockMenu);
         setLoading(false);
       }, 500);
+    }
+  };
+  
+  const fetchReviews = async () => {
+    try {
+      const response = await api.get(`/admin/restaurants/${id}/reviews`);
+      setReviews(response.data);
     } catch (error) {
-      console.error('Erro ao buscar detalhes do restaurante:', error);
-      setLoading(false);
-      navigate('/restaurants');
+      console.error('Erro ao buscar avaliações do restaurante:', error);
+      
+      // Dados simulados para demonstração
+      const mockReviews = [
+        {
+          id: 1,
+          rating: 5,
+          comment: 'Comida excelente e entrega rápida! Recomendo a todos.',
+          commentType: 'praise',
+          author: 'Maria Silva',
+          createdAt: '2023-05-15T14:30:00Z'
+        },
+        {
+          id: 2,
+          rating: 4,
+          comment: 'Muito bom, mas a entrega demorou um pouco mais do que o esperado.',
+          commentType: 'criticism',
+          author: 'João Santos',
+          createdAt: '2023-05-10T19:45:00Z'
+        },
+        {
+          id: 3,
+          rating: 5,
+          comment: 'A feijoada é simplesmente incrível! Melhor da cidade.',
+          commentType: 'praise',
+          author: 'Ana Oliveira',
+          createdAt: '2023-05-05T12:15:00Z'
+        }
+      ];
+      
+      setReviews(mockReviews);
+    }
+  };
+  
+  const handleSubmitRating = async (e) => {
+    e.preventDefault();
+    
+    if (adminRating === 0) {
+      alert('Por favor, selecione uma avaliação de 1 a 5 estrelas.');
+      return;
+    }
+    
+    try {
+      setSubmitting(true);
+      
+      await api.post(`/admin/restaurants/${id}/rate`, {
+        rating: adminRating,
+        comment,
+        commentType
+      });
+      
+      alert('Avaliação enviada com sucesso!');
+      setAdminRating(0);
+      setComment('');
+      setCommentType('');
+      fetchRestaurantDetails(); // Atualizar os detalhes após a avaliação
+      fetchReviews(); // Atualizar as avaliações
+      
+      setSubmitting(false);
+    } catch (error) {
+      console.error('Erro ao enviar avaliação:', error);
+      alert('Erro ao enviar avaliação. Tente novamente.');
+      setSubmitting(false);
+    }
+  };
+  
+  const handleCommentChange = (e) => {
+    const value = e.target.value;
+    if (value.length <= MAX_COMMENT_LENGTH) {
+      setComment(value);
     }
   };
   
   const handleDeleteRestaurant = async () => {
     if (window.confirm('Tem certeza que deseja excluir este restaurante? Esta ação não pode ser desfeita.')) {
       try {
-        // Em um cenário real, você enviaria a requisição para a API
-        // await api.delete(`/admin/restaurants/${id}`);
-        
-        // Simulação
-        setTimeout(() => {
-          alert('Restaurante excluído com sucesso!');
-          navigate('/restaurants');
-        }, 500);
+        await api.delete(`/admin/restaurants/${id}`);
+        alert('Restaurante excluído com sucesso!');
+        navigate('/restaurants');
       } catch (error) {
         console.error('Erro ao excluir restaurante:', error);
         alert('Erro ao excluir restaurante. Tente novamente.');
@@ -284,6 +503,17 @@ const RestaurantDetails = () => {
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('pt-BR');
+  };
+  
+  const formatDateTime = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
   
   const formatCurrency = (value) => {
@@ -345,13 +575,114 @@ const RestaurantDetails = () => {
               <FaCalendarAlt />
               Cadastrado em {formatDate(restaurant.createdAt)}
             </MetaItem>
-            <Rating>
-              <FaStar />
-              {restaurant.rating.toFixed(1)}
-            </Rating>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <FaStar style={{ color: '#f59e0b' }} />
+              <span style={{ fontWeight: 500 }}>{restaurant.rating.toFixed(1)}</span>
+              <StarRating 
+                rating={restaurant.rating} 
+                readOnly={true} 
+                size="16px" 
+                showValue={false}
+              />
+            </div>
           </RestaurantMeta>
         </RestaurantInfo>
       </RestaurantHeader>
+      
+      <RatingSection>
+        <SectionTitle>
+          <FaStar /> Avaliar Restaurante
+        </SectionTitle>
+        
+        <RatingForm onSubmit={handleSubmitRating}>
+          <StarRating 
+            rating={adminRating} 
+            onChange={setAdminRating} 
+            label="Selecione uma avaliação (1-5 estrelas)"
+          />
+          
+          <div>
+            <DetailLabel>Tipo de comentário (opcional):</DetailLabel>
+            <CommentTypeSelector>
+              <CommentTypeButton 
+                type="praise" 
+                active={commentType === 'praise'}
+                onClick={(e) => {
+                  e.preventDefault();
+                  setCommentType(commentType === 'praise' ? '' : 'praise');
+                }}
+              >
+                <FaCheck /> Elogio
+              </CommentTypeButton>
+              <CommentTypeButton 
+                type="criticism" 
+                active={commentType === 'criticism'}
+                onClick={(e) => {
+                  e.preventDefault();
+                  setCommentType(commentType === 'criticism' ? '' : 'criticism');
+                }}
+              >
+                <FaTimes /> Crítica
+              </CommentTypeButton>
+            </CommentTypeSelector>
+          </div>
+          
+          <div>
+            <DetailLabel>Comentário (opcional, máx. 140 caracteres):</DetailLabel>
+            <CommentInput 
+              value={comment}
+              onChange={handleCommentChange}
+              placeholder="Deixe um comentário sobre este restaurante..."
+              maxLength={MAX_COMMENT_LENGTH}
+            />
+            <CharacterCounter isLimit={comment.length >= MAX_COMMENT_LENGTH}>
+              {comment.length}/{MAX_COMMENT_LENGTH}
+            </CharacterCounter>
+          </div>
+          
+          <SubmitButton type="submit" disabled={submitting || adminRating === 0}>
+            {submitting ? 'Enviando...' : 'Enviar Avaliação'}
+          </SubmitButton>
+        </RatingForm>
+      </RatingSection>
+      
+      <Section>
+        <SectionTitle>
+          <FaStar /> Avaliações dos Clientes
+        </SectionTitle>
+        
+        {reviews.length > 0 ? (
+          <ReviewsSection>
+            {reviews.map(review => (
+              <ReviewItem key={review.id}>
+                <ReviewHeader>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <ReviewAuthor>{review.author}</ReviewAuthor>
+                    {review.commentType && (
+                      <CommentTypeBadge type={review.commentType}>
+                        {review.commentType === 'praise' ? (
+                          <><FaCheck /> Elogio</>
+                        ) : (
+                          <><FaTimes /> Crítica</>
+                        )}
+                      </CommentTypeBadge>
+                    )}
+                  </div>
+                  <ReviewDate>{formatDateTime(review.createdAt)}</ReviewDate>
+                </ReviewHeader>
+                <StarRating 
+                  rating={review.rating} 
+                  readOnly={true} 
+                  size="16px" 
+                />
+                {review.comment && <ReviewText>{review.comment}</ReviewText>}
+              </ReviewItem>
+            ))}
+          </ReviewsSection>
+        ) : (
+          <NoItems>Nenhuma avaliação disponível.</NoItems>
+        )}
+      </Section>
       
       <Section>
         <SectionTitle>

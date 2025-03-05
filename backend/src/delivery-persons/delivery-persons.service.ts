@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { VehicleType, DeliveryPersonStatus } from '@prisma/client';
+import { VehicleType, DeliveryPersonStatus } from '../prisma/prisma.service';
 
 @Injectable()
 export class DeliveryPersonsService {
@@ -15,27 +15,61 @@ export class DeliveryPersonsService {
     vehicleType: VehicleType;
     vehiclePlate?: string;
   }) {
-    const user = await this.prisma.user.create({
-      data: {
-        email: data.email,
-        password: data.password, // Deve ser criptografada antes
-        name: data.name,
-        role: 'DELIVERY_PERSON',
-        deliveryPerson: {
-          create: {
-            cpf: data.cpf,
-            phone: data.phone,
-            vehicleType: data.vehicleType,
-            vehiclePlate: data.vehiclePlate,
-          },
-        },
-      },
-      include: {
-        deliveryPerson: true,
-      },
+    // Verificar se já existe um usuário com este email
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email: data.email },
     });
 
-    return user;
+    if (existingUser) {
+      throw new Error('Email already in use');
+    }
+
+    // Verificar se já existe um entregador com este CPF
+    const existingDeliveryPerson = await this.prisma.deliveryPerson.findMany({
+      where: { cpf: data.cpf },
+    });
+
+    if (existingDeliveryPerson.length > 0) {
+      throw new Error('CPF already registered');
+    }
+
+    // Criar o usuário e o entregador em uma transação
+    try {
+      // Criar usuário
+      const user = await this.prisma.user.create({
+        data: {
+          email: data.email,
+          password: data.password, // Assumindo que o hash é feito em outro lugar
+          name: data.name,
+          role: 'DELIVERY_PERSON',
+        },
+      });
+
+      // Criar entregador
+      const deliveryPerson = await this.prisma.deliveryPerson.create({
+        data: {
+          userId: user.id,
+          cpf: data.cpf,
+          phone: data.phone,
+          vehicleType: data.vehicleType,
+          vehiclePlate: data.vehiclePlate,
+          status: DeliveryPersonStatus.AVAILABLE,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+      });
+
+      return deliveryPerson;
+    } catch (error) {
+      throw new Error(`Failed to create delivery person: ${error.message}`);
+    }
   }
 
   async findAll(params: {
@@ -74,7 +108,9 @@ export class DeliveryPersonsService {
         },
       },
       orderBy: {
-        createdAt: 'desc',
+        user: {
+          name: 'asc',
+        },
       },
     });
 
@@ -126,7 +162,6 @@ export class DeliveryPersonsService {
                         name: true,
                       },
                     },
-                    address: true,
                   },
                 },
               },
@@ -147,7 +182,9 @@ export class DeliveryPersonsService {
   }) {
     const deliveryPerson = await this.prisma.deliveryPerson.findUnique({
       where: { id },
-      include: { user: true },
+      include: {
+        user: true,
+      },
     });
 
     if (!deliveryPerson) {
@@ -158,7 +195,9 @@ export class DeliveryPersonsService {
     if (data.name) {
       await this.prisma.user.update({
         where: { id: deliveryPerson.userId },
-        data: { name: data.name },
+        data: {
+          name: data.name,
+        },
       });
     }
 
@@ -197,27 +236,31 @@ export class DeliveryPersonsService {
   async updateStatus(id: string, status: DeliveryPersonStatus) {
     return this.prisma.deliveryPerson.update({
       where: { id },
-      data: { status },
+      data: {
+        status,
+      },
     });
   }
 
   async remove(id: string) {
-    // Em vez de excluir, apenas desativar
     return this.prisma.deliveryPerson.update({
       where: { id },
-      data: { isActive: false },
+      data: {
+        isActive: false,
+      },
     });
   }
 
   async getDeliveryStats(id: string) {
     const deliveryPerson = await this.prisma.deliveryPerson.findUnique({
       where: { id },
-      select: {
-        totalDeliveries: true,
-        rating: true,
-      },
     });
 
+    if (!deliveryPerson) {
+      throw new Error('Delivery person not found');
+    }
+
+    // Obter estatísticas de entregas
     const completedDeliveries = await this.prisma.delivery.count({
       where: {
         deliveryPersonId: id,
@@ -244,18 +287,18 @@ export class DeliveryPersonsService {
 
     return {
       totalDeliveries: deliveryPerson.totalDeliveries,
-      rating: deliveryPerson.rating,
       completedDeliveries,
       canceledDeliveries,
+      rating: deliveryPerson.rating,
       totalEarnings: totalEarnings._sum.fee || 0,
     };
   }
 
-  async getAvailableDeliveryPersons(restaurantLatitude: number, restaurantLongitude: number) {
-    // Buscar entregadores disponíveis, ordenados por proximidade
+  async getAvailableDeliveryPersons(latitude: number, longitude: number) {
+    // Encontrar entregadores disponíveis
     const availableDeliveryPersons = await this.prisma.deliveryPerson.findMany({
       where: {
-        status: 'AVAILABLE',
+        status: DeliveryPersonStatus.AVAILABLE,
         isActive: true,
         currentLatitude: { not: null },
         currentLongitude: { not: null },
@@ -270,27 +313,42 @@ export class DeliveryPersonsService {
     });
 
     // Calcular distância e ordenar por proximidade
-    return availableDeliveryPersons
-      .map(dp => ({
-        ...dp,
-        distance: this.calculateDistance(
-          restaurantLatitude,
-          restaurantLongitude,
+    const deliveryPersonsWithDistance = availableDeliveryPersons
+      .map(dp => {
+        // Calcular distância usando a fórmula de Haversine
+        const distance = this.calculateDistance(
+          latitude,
+          longitude,
           dp.currentLatitude,
           dp.currentLongitude,
-        ),
-      }))
+        );
+        
+        return {
+          ...dp,
+          distance,
+        };
+      })
       .sort((a, b) => a.distance - b.distance);
+
+    return deliveryPersonsWithDistance;
   }
 
-  private calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-    // Implementação do cálculo de distância usando a fórmula de Haversine
+  // Função auxiliar para calcular distância usando a fórmula de Haversine
+  private calculateDistance(
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number,
+  ): number {
     const R = 6371; // Raio da Terra em km
     const dLat = this.deg2rad(lat2 - lat1);
     const dLon = this.deg2rad(lon2 - lon1);
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(this.deg2rad(lat1)) * Math.cos(this.deg2rad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      Math.cos(this.deg2rad(lat1)) *
+        Math.cos(this.deg2rad(lat2)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     const distance = R * c; // Distância em km
     return distance;

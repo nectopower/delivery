@@ -14,6 +14,10 @@ import Orders from './pages/Orders';
 import OrderDetails from './pages/OrderDetails';
 import Payments from './pages/Payments';
 import PaymentDetails from './pages/PaymentDetails';
+import DeliveryPersons from './pages/DeliveryPersons';
+import DeliveryPersonForm from './pages/DeliveryPersonForm';
+import DeliveryPersonDetails from './pages/DeliveryPersonDetails';
+import DeliveryFeeConfig from './pages/DeliveryFeeConfig';
 
 // Componente para rotas protegidas
 const ProtectedRoute = ({ children }) => {
@@ -51,6 +55,11 @@ function App() {
             <Route path="payments" element={<Payments />} />
             <Route path="payments/:id" element={<PaymentDetails />} />
             <Route path="statistics" element={<Statistics />} />
+            <Route path="delivery-persons" element={<DeliveryPersons />} />
+            <Route path="delivery-persons/new" element={<DeliveryPersonForm />} />
+            <Route path="delivery-persons/edit/:id" element={<DeliveryPersonForm />} />
+            <Route path="delivery-persons/:id" element={<DeliveryPersonDetails />} />
+            <Route path="delivery-fee-config" element={<DeliveryFeeConfig />} />
           </Route>
         </Routes>
       </Router>

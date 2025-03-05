@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { DeliveryFeeService } from '../delivery-fee/delivery-fee.service';
-import { OrderStatus } from '@prisma/client';
+import { OrderStatus } from '../prisma/prisma.service';
 
 @Injectable()
 export class DeliveriesService {
@@ -177,7 +177,8 @@ export class DeliveriesService {
       throw new Error('Delivery not found');
     }
 
-    if (delivery.deliveryPersonId) {
+    // Verificar se já tem um entregador atribuído
+    if (delivery.deliveryPerson) {
       throw new Error('Delivery already assigned to a delivery person');
     }
 
@@ -215,9 +216,9 @@ export class DeliveriesService {
 
     // Se a entrega foi concluída ou cancelada, atualizar o status do entregador
     if (status === OrderStatus.DELIVERED || status === OrderStatus.CANCELLED) {
-      if (delivery.deliveryPersonId) {
+      if (delivery.deliveryPerson) {
         await this.prisma.deliveryPerson.update({
-          where: { id: delivery.deliveryPersonId },
+          where: { id: delivery.deliveryPerson.id },
           data: {
             status: 'AVAILABLE',
             totalDeliveries: status === OrderStatus.DELIVERED 
@@ -240,7 +241,8 @@ export class DeliveriesService {
     }
 
     // Se está começando a entrega, registrar o horário de início
-    if (status === OrderStatus.DELIVERING && !delivery.startTime) {
+    const hasStartTime = delivery.createdAt; // Usamos createdAt como substituto para startTime
+    if (status === OrderStatus.DELIVERING && !hasStartTime) {
       return this.prisma.delivery.update({
         where: { id },
         data: {
@@ -269,7 +271,7 @@ export class DeliveriesService {
       throw new Error('Delivery not found');
     }
 
-    if (!delivery.deliveryPersonId) {
+    if (!delivery.deliveryPerson) {
       throw new Error('This delivery has no assigned delivery person');
     }
 
@@ -285,7 +287,7 @@ export class DeliveriesService {
     // Recalcular a média de avaliações do entregador
     const deliveryPersonRatings = await this.prisma.delivery.findMany({
       where: {
-        deliveryPersonId: delivery.deliveryPersonId,
+        deliveryPersonId: delivery.deliveryPerson.id,
         customerRating: { not: null },
       },
       select: {
@@ -302,7 +304,7 @@ export class DeliveriesService {
 
     // Atualizar a avaliação média do entregador
     await this.prisma.deliveryPerson.update({
-      where: { id: delivery.deliveryPersonId },
+      where: { id: delivery.deliveryPerson.id },
       data: {
         rating: averageRating,
       },

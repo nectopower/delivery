@@ -21,6 +21,9 @@ const orders_module_1 = require("./orders/orders.module");
 const payments_module_1 = require("./payments/payments.module");
 const notifications_module_1 = require("./notifications/notifications.module");
 const categories_module_1 = require("./categories/categories.module");
+const delivery_persons_module_1 = require("./delivery-persons/delivery-persons.module");
+const delivery_fee_module_1 = require("./delivery-fee/delivery-fee.module");
+const deliveries_module_1 = require("./deliveries/deliveries.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -38,6 +41,9 @@ exports.AppModule = AppModule = __decorate([
             payments_module_1.PaymentsModule,
             notifications_module_1.NotificationsModule,
             categories_module_1.CategoriesModule,
+            delivery_persons_module_1.DeliveryPersonsModule,
+            delivery_fee_module_1.DeliveryFeeModule,
+            deliveries_module_1.DeliveriesModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],

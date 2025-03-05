@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Put, Body, UseGuards } from '@nestjs/common';
 import { DeliveryFeeService } from './delivery-fee.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -6,19 +6,17 @@ import { Roles } from '../auth/decorators/roles.decorator';
 
 @Controller('delivery-fee')
 export class DeliveryFeeController {
-  constructor(private readonly deliveryFeeService: DeliveryFeeService) {}
+  constructor(private deliveryFeeService: DeliveryFeeService) {}
 
   @Get('config')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
-  getConfig() {
+  async getConfig() {
     return this.deliveryFeeService.getConfig();
   }
 
-  @Post('config')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
-  updateConfig(@Body() updateConfigDto: {
+  @Put('config')
+  async updateConfig(@Body() data: {
     basePrice?: number;
     pricePerKm?: number;
     rushHourMultiplier?: number;
@@ -28,18 +26,17 @@ export class DeliveryFeeController {
     nightFeeStart?: number;
     nightFeeEnd?: number;
   }) {
-    return this.deliveryFeeService.updateConfig(updateConfigDto);
+    return this.deliveryFeeService.updateConfig(data);
   }
 
-  @Post('calculate')
-  calculateDeliveryFee(@Body() data: { distance: number; orderTime?: string }) {
-    const orderTime = data.orderTime ? new Date(data.orderTime) : new Date();
-    return this.deliveryFeeService.calculateDeliveryFee(data.distance, orderTime);
-  }
-
-  @Post('estimate-time')
-  getDeliveryTimeEstimate(@Body() data: { distance: number; orderTime?: string }) {
-    const orderTime = data.orderTime ? new Date(data.orderTime) : new Date();
-    return this.deliveryFeeService.getDeliveryTimeEstimate(data.distance, orderTime);
+  @Get('calculate')
+  async calculateFee(
+    @Body() data: { distance: number; orderTime?: string }
+  ) {
+    // Não passamos o orderTime para os métodos, pois eles não aceitam esse parâmetro
+    return {
+      fee: await this.deliveryFeeService.calculateDeliveryFee(data.distance),
+      estimatedTime: await this.deliveryFeeService.getDeliveryTimeEstimate(data.distance)
+    };
   }
 }

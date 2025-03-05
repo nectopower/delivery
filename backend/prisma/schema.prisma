@@ -66,6 +66,7 @@ model User {
   restaurant     Restaurant?
   customer       Customer?
   deliveryPerson DeliveryPerson?
+  notifications  Notification[]
 }
 
 model Admin {
@@ -224,4 +225,16 @@ model DeliveryFeeConfig {
   nightFeeEnd       Int      // hora do dia (0-23)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+}
+
+model Notification {
+  id          String   @id @default(uuid())
+  type        String
+  message     String
+  recipientId String
+  recipient   User     @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  read        Boolean  @default(false)
+  data        Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
